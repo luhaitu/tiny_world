@@ -1,9 +1,9 @@
-import { TREE_SIZE, WOOD_PER_TREE } from '../constants.js';
+import BasePlant from './BasePlant.js';
+import { TREE_SIZE, WOOD_PER_TREE } from '../../constants.js';
 
-export default class Tree {
+export default class Tree extends BasePlant {
     constructor(x, y) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.size = TREE_SIZE;
         this.color = '#8d6e63';
         this.foliageColor = '#66bb6a';

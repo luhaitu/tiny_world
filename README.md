@@ -5,17 +5,22 @@ Tiny World is a real-time strategy prototype with town-building and survival mec
 
 ## Features
 
-- Initializes with five humans.
-- Randomly spawns bushes and trees, some with berries.
-- Adds animals that can be hunted for food.
-- Provides a central storage where humans can deposit or retrieve food and equipment.
-- Hunger decreases over time; once empty health declines. Hungry humans look for food and can only eat items they carry or take from storage.
+- Initializes with a handful of villagers.
+- Spawns red and poisonous berry bushes as well as trees.
+- Rabbits provide food while wolves roam the map and may attack prey or villagers.
+- Central storage and houses are represented as buildings.
+- Hunger decreases over time; eating berries or meat restores it while poisonous berries hurt health.
 
 ## Project Structure
 
 - `index.html` - main simulation page
 - `js/main.js` - game logic
 - `css/style.css` - visual styling
+- `js/entities/` contains all entity classes organised by type:
+  - `human/` - `BaseHuman` and the `Villager` class
+  - `animal/` - `BaseAnimal`, `Rabbit` and `Wolf`
+  - `plant/` - `BasePlant`, `Tree`, `Bush`, `RedBerryBush`, `PoisonBerryBush`
+  - `building/` - `BaseBuilding`, `Storage` and `House`
 
 ## Getting Started
 

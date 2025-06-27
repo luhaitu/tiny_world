@@ -1,47 +1,46 @@
-import { HUMAN_SIZE, HUMAN_SPEED, MAX_HUNGER, HUNGER_DECAY_RATE, HUNGER_THRESHOLD_TO_EAT, HUNGER_THRESHOLD_TO_GATHER, GATHER_DISTANCE, CARRY_CAPACITY, GATHER_BERRY_DURATION, CHOP_WOOD_DURATION, HUNT_RABBIT_DURATION, HUNGER_PER_BERRY, HUNGER_PER_FOOD } from '../constants.js';
-import BerryBush from './BerryBush.js';
-import Tree from './Tree.js';
-import Rabbit from './Rabbit.js';
+import BaseHuman from './BaseHuman.js';
+import { HUMAN_SIZE, HUMAN_SPEED, MAX_HUNGER, HUNGER_DECAY_RATE, HUNGER_THRESHOLD_TO_EAT, HUNGER_THRESHOLD_TO_GATHER, GATHER_DISTANCE, CARRY_CAPACITY, GATHER_BERRY_DURATION, CHOP_WOOD_DURATION, HUNT_RABBIT_DURATION, HUNGER_PER_BERRY, HUNGER_PER_FOOD, POISON_BERRY_DAMAGE, MAX_HEALTH } from '../../constants.js';
+import Bush from '../plant/Bush.js';
+import Tree from '../plant/Tree.js';
+import Rabbit from '../animal/Rabbit.js';
+import Wolf from '../animal/Wolf.js';
 
-export default class Human {
+export default class Villager extends BaseHuman {
     constructor(x, y, id, gender) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.id = id;
         this.gender = gender;
         this.color = gender === 'M' ? '#4a90e2' : '#e91e63';
         this.size = HUMAN_SIZE;
         this.hunger = MAX_HUNGER;
+        this.health = MAX_HEALTH;
         this.destination = { x, y };
 
         // Task / Targetting
-        this.task = 'idle'; // idle, moving, gathering_berries, chopping_wood, hunting, returning_storage, eating
-        this.target = null; // Can be bush, tree, rabbit, or storage coords {x,y}
+        this.task = 'idle';
+        this.target = null;
         this.actionTimer = 0;
 
         // Inventory
         this.berriesCarried = 0;
         this.woodCarried = 0;
-        this.foodCarried = 0; // Carrying hunted food
+        this.foodCarried = 0;
 
         this.isSelected = false;
     }
 
     draw(ctx) {
-        // Draw human body
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Selection indicator
         if (this.isSelected) {
-            ctx.strokeStyle = '#FFD700'; // Gold
+            ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
             ctx.stroke();
         }
 
-        // Hunger bar
         const barWidth = this.size * 1.5;
         const barHeight = 4;
         const barX = this.x - barWidth / 2;
@@ -54,29 +53,17 @@ export default class Human {
         if (hungerPercent < 0.3) hungerBarColor = '#f44336';
         ctx.fillStyle = hungerBarColor;
         ctx.fillRect(barX, barY, barWidth * hungerPercent, barHeight);
-
-        // Simple carry indicator (optional)
-        const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried;
-        if (carriedTotal > 0) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.beginPath();
-            ctx.rect(this.x + this.size / 2, this.y - this.size / 4, 4, 4);
-            ctx.fill();
-        }
     }
 
-    update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, berryBushes, trees, rabbits) {
-        // 1. Update Needs
+    update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, bushes, trees, animals) {
         this.hunger -= HUNGER_DECAY_RATE;
         if (this.hunger < 0) this.hunger = 0;
-        // TODO: Consequences of zero hunger
+        if (this.health <= 0) return;
 
-        // 2. Execute Current Action State
         this.executeTask(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, trees);
 
-        // 3. Decide Next Action (if idle or finished task)
         if (this.task === 'idle') {
-            this.decideNextAction(storage, berryBushes, trees, rabbits);
+            this.decideNextAction(storage, bushes, trees, animals);
         }
     }
 
@@ -92,19 +79,18 @@ export default class Human {
             case 'chopping_wood':
             case 'hunting':
                 this.performAction(storage, updateStorageInfo, trees);
-                break; // Don't move while performing timed action
+                break;
             case 'returning_storage':
                 this.moveTowards(storage.x, storage.y, canvasWidth, canvasHeight);
                 if (this.hasReached(storage.x, storage.y)) {
                     this.depositResources(storage, updateStorageInfo);
-                    this.task = 'idle'; // Decide next after depositing
+                    this.task = 'idle';
                 }
                 break;
             case 'eating':
-                this.performAction(storage, updateStorageInfo, trees); // Eating takes time
+                this.performAction(storage, updateStorageInfo, trees);
                 break;
             case 'idle':
-                // Do nothing, wait for decision
                 break;
         }
     }
@@ -114,15 +100,18 @@ export default class Human {
         let duration = 0;
         let resourceGained = false;
 
-        if (this.task === 'gathering_berries' && this.target instanceof BerryBush) {
+        if (this.task === 'gathering_berries' && this.target instanceof Bush) {
             duration = GATHER_BERRY_DURATION;
             if (this.actionTimer >= duration) {
                 if (this.target.berries > 0) {
                     this.target.berries--;
                     this.berriesCarried++;
+                    if (this.target.poisonous) {
+                        this.health -= POISON_BERRY_DAMAGE;
+                    }
                     resourceGained = true;
                 } else {
-                    this.target = null; // Target depleted mid-action
+                    this.target = null;
                 }
             }
         } else if (this.task === 'chopping_wood' && this.target instanceof Tree) {
@@ -137,21 +126,21 @@ export default class Human {
                         this.target = null;
                     }
                 } else {
-                    this.target = null; // Target depleted mid-action (e.g. removed already)
+                    this.target = null;
                 }
             }
-        } else if (this.task === 'hunting' && this.target instanceof Rabbit) {
+        } else if (this.task === 'hunting' && (this.target instanceof Rabbit || this.target instanceof Wolf)) {
             duration = HUNT_RABBIT_DURATION;
             if (this.actionTimer >= duration) {
                 if (this.target.isAlive) {
-                    this.target.isAlive = false; // Mark rabbit as caught
+                    this.target.isAlive = false;
                     this.foodCarried++;
                     resourceGained = true;
                 }
-                this.target = null; // Stop targeting after attempt
+                this.target = null;
             }
         } else if (this.task === 'eating') {
-            duration = GATHER_BERRY_DURATION; // Eating takes same time as gathering
+            duration = GATHER_BERRY_DURATION;
             if (this.actionTimer >= duration) {
                 if (storage.berries > 0 && this.hunger < MAX_HUNGER) {
                     storage.berries--;
@@ -166,29 +155,21 @@ export default class Human {
                 } else if (storage.berries === 0 && storage.food === 0) {
                     this.task = 'idle';
                 }
-                this.actionTimer = 0; // Reset timer for next bite or stop
+                this.actionTimer = 0;
             }
         }
 
-        // If action finished or target became invalid
-        if (
-            this.actionTimer >= duration ||
-            (this.target === null && (this.task === 'gathering_berries' || this.task === 'chopping_wood' || this.task === 'hunting'))
-        ) {
+        if (this.actionTimer >= duration || (this.target === null && (this.task === 'gathering_berries' || this.task === 'chopping_wood' || this.task === 'hunting'))) {
             this.actionTimer = 0;
             const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried;
-            if (
-                carriedTotal >= CARRY_CAPACITY ||
-                !resourceGained ||
-                (this.target && (this.target.berries === 0 || this.target.wood === 0))
-            ) {
+            if (carriedTotal >= CARRY_CAPACITY || !resourceGained || (this.target && (this.target.berries === 0 || this.target.wood === 0))) {
                 this.task = 'returning_storage';
                 this.target = null;
             }
         }
     }
 
-    decideNextAction(storage, berryBushes, trees, rabbits) {
+    decideNextAction(storage, bushes, trees, animals) {
         const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried;
 
         if (this.hunger < HUNGER_THRESHOLD_TO_EAT && (storage.berries > 0 || storage.food > 0)) {
@@ -210,14 +191,14 @@ export default class Human {
         }
 
         if (this.hunger < HUNGER_THRESHOLD_TO_GATHER) {
-            let foodTarget = this.findClosestReachable(rabbits.filter(r => r.isAlive));
+            let foodTarget = this.findClosestReachable(animals.filter(a => a instanceof Rabbit && a.isAlive));
             if (foodTarget) {
                 this.target = foodTarget;
                 this.task = 'moving';
                 this.destination = { x: foodTarget.x, y: foodTarget.y };
                 return;
             }
-            let berryTarget = this.findClosestReachable(berryBushes.filter(b => b.berries > 0));
+            let berryTarget = this.findClosestReachable(bushes.filter(b => b.berries > 0));
             if (berryTarget) {
                 this.target = berryTarget;
                 this.task = 'moving';
@@ -255,16 +236,16 @@ export default class Human {
 
             if (this.target && this.hasReached(this.target.x, this.target.y)) {
                 this.actionTimer = 0;
-                if (this.target instanceof BerryBush) this.task = 'gathering_berries';
+                if (this.target instanceof Bush) this.task = 'gathering_berries';
                 else if (this.target instanceof Tree) this.task = 'chopping_wood';
-                else if (this.target instanceof Rabbit) this.task = 'hunting';
+                else if (this.target instanceof Rabbit || this.target instanceof Wolf) this.task = 'hunting';
             }
         } else {
             if (this.target && this.task === 'moving') {
                 this.actionTimer = 0;
-                if (this.target instanceof BerryBush) this.task = 'gathering_berries';
+                if (this.target instanceof Bush) this.task = 'gathering_berries';
                 else if (this.target instanceof Tree) this.task = 'chopping_wood';
-                else if (this.target instanceof Rabbit) this.task = 'hunting';
+                else if (this.target instanceof Rabbit || this.target instanceof Wolf) this.task = 'hunting';
                 else {
                     this.task = 'idle';
                     this.destination = { x: this.x, y: this.y };
@@ -292,12 +273,10 @@ export default class Human {
     }
 
     setManualTarget(resource) {
-        if (resource instanceof BerryBush || resource instanceof Tree || resource instanceof Rabbit) {
-            if (
-                (resource instanceof BerryBush && resource.berries > 0) ||
+        if (resource instanceof Bush || resource instanceof Tree || resource instanceof Rabbit || resource instanceof Wolf) {
+            if ((resource instanceof Bush && resource.berries > 0) ||
                 (resource instanceof Tree && resource.wood > 0) ||
-                (resource instanceof Rabbit && resource.isAlive)
-            ) {
+                ((resource instanceof Rabbit || resource instanceof Wolf) && resource.isAlive)) {
                 this.target = resource;
                 this.destination = { x: resource.x, y: resource.y };
                 this.task = 'moving';
@@ -317,9 +296,9 @@ export default class Human {
         let minDistance = Infinity;
         resourceList.forEach(resource => {
             let isValid = false;
-            if (resource instanceof BerryBush && resource.berries > 0) isValid = true;
+            if (resource instanceof Bush && resource.berries > 0) isValid = true;
             else if (resource instanceof Tree && resource.wood > 0) isValid = true;
-            else if (resource instanceof Rabbit && resource.isAlive) isValid = true;
+            else if ((resource instanceof Rabbit || resource instanceof Wolf) && resource.isAlive) isValid = true;
 
             if (isValid) {
                 const dx = resource.x - this.x;
