@@ -5,6 +5,17 @@ import Tree from './entities/plant/Tree.js';
 import Rabbit from './entities/animal/Rabbit.js';
 import Wolf from './entities/animal/Wolf.js';
 import Storage from './entities/building/Storage.js';
+
+// Simple environment detection so the simulation can be served from
+// http://localhost during development. When the file is opened directly
+// from the filesystem the browser will block module imports with a CORS
+// error. Inform the developer so they know to start a local server.
+const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+if (location.protocol === 'file:' && isDev) {
+    console.warn('Running from file:// with modules can trigger CORS errors. ' +
+        'Serve the project via a local server (e.g. `npx http-server`) for ' +
+        'a smoother development experience.');
+}
 import {
     MAX_HUNGER,
 } from './constants.js';
