@@ -11,6 +11,8 @@ Tiny World is a real-time strategy prototype with town-building and survival mec
 - [x]Central storage and houses are represented as buildings.
 - [x]Hunger decreases over time.
 - eating berries or meat restores it while poisonous berries hurt health.
+- each animal and human have varied health when first created.
+- allow extracting meat out of dead animal or human.
 
 ## Project Structure
 
