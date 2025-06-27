@@ -5,11 +5,12 @@ Tiny World is a real-time strategy prototype with town-building and survival mec
 
 ## Features
 
-- Initializes with a handful of villagers.
-- Spawns red and poisonous berry bushes as well as trees.
+- [x]Initializes with a handful of villagers.
+- [x]Spawns red and poisonous berry bushes as well as trees.
 - Rabbits provide food while wolves roam the map and may attack prey or villagers.
-- Central storage and houses are represented as buildings.
-- Hunger decreases over time; eating berries or meat restores it while poisonous berries hurt health.
+- [x]Central storage and houses are represented as buildings.
+- [x]Hunger decreases over time.
+- eating berries or meat restores it while poisonous berries hurt health.
 
 ## Project Structure
 
