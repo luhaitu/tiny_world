@@ -1,0 +1,64 @@
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f4f8;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background-color: #e2f0d9;
+            cursor: pointer;
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        .controls {
+            margin-left: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-width: 220px; /* Increased min-width */
+        }
+        .human-info p, .storage-info p {
+            margin-bottom: 5px;
+            font-size: 0.9rem; /* Slightly smaller font */
+        }
+         .storage-info {
+             margin-top: 15px;
+             padding-top: 10px;
+             border-top: 1px solid #eee;
+         }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 15px;
+            margin-top: 2px;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4caf50; /* Green */
+            width: 0%;
+            transition: width 0.3s ease;
+            text-align: center;
+            color: white;
+            font-size: 10px;
+            line-height: 15px;
+        }
+         .progress-bar.low { background-color: #ff9800; } /* Orange */
+         .progress-bar.critical { background-color: #f44336; } /* Red */
+        button {
+            padding: 8px 15px;
+            background-color: #4a90e2; /* Blue button */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        button:hover { background-color: #357abd; }

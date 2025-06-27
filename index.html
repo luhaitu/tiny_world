@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primal Simulation - Wood & Storage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="flex flex-col md:flex-row items-start justify-center p-4">
+
+    <canvas id="simulationCanvas" width="700" height="500"></canvas>
+    <div class="controls mt-4 md:mt-0 md:ml-4 p-4 bg-white rounded-lg shadow-md w-full md:w-auto">
+        <h2 class="text-lg font-semibold mb-3">Simulation Info</h2>
+        <div id="selectedHumanInfo" class="human-info mb-4">
+            <p>Select a human to see details.</p>
+        </div>
+        <div id="storageInfo" class="storage-info">
+            <h3 class="text-md font-semibold mb-2">Central Storage</h3>
+            <p id="storageBerries">Berries: 0</p>
+            <p id="storageWood">Wood: 0</p>
+            <p id="storageFood">Food (Meat): 0</p>
+        </div>
+        <p class="text-sm text-gray-600 mt-4">Click human to select. Click ground to move. Click resource (bush/tree/rabbit) to target.</p>
+        <button id="resetButton">Reset Simulation</button>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>
