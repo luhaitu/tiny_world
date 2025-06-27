@@ -1,12 +1,11 @@
-import { RABBIT_SIZE, RABBIT_SPEED } from '../constants.js';
+import BaseAnimal from './BaseAnimal.js';
+import { RABBIT_SIZE, RABBIT_SPEED } from '../../constants.js';
 
-export default class Rabbit {
+export default class Rabbit extends BaseAnimal {
     constructor(x, y) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.size = RABBIT_SIZE;
         this.color = '#bdbdbd';
-        this.isAlive = true;
         this.wanderAngle = Math.random() * Math.PI * 2;
         this.wanderTimer = 0;
         this.wanderInterval = 120 + Math.random() * 180;

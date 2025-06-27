@@ -1,15 +1,16 @@
-import { BUSH_SIZE, BERRIES_PER_BUSH } from '../constants.js';
+import BasePlant from './BasePlant.js';
+import { BUSH_SIZE, BERRIES_PER_BUSH } from '../../constants.js';
 
-export default class BerryBush {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
+export default class Bush extends BasePlant {
+    constructor(x, y, poisonous = false) {
+        super(x, y);
         this.size = BUSH_SIZE;
         this.color = '#2e7d32';
         this.berries = BERRIES_PER_BUSH;
         this.maxBerries = BERRIES_PER_BUSH;
         this.regenTimer = 0;
-        this.regenRate = 500; // Frames to regenerate one berry
+        this.regenRate = 500;
+        this.poisonous = poisonous;
     }
 
     draw(ctx) {
@@ -18,7 +19,7 @@ export default class BerryBush {
         ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#d32f2f';
+        ctx.fillStyle = this.poisonous ? '#8e24aa' : '#d32f2f';
         const berrySize = 2;
         for (let i = 0; i < this.berries; i++) {
             const angle = (i / this.maxBerries) * Math.PI * 2 + Math.PI / 4;

@@ -1,7 +1,10 @@
-import Human from './entities/Human.js';
-import BerryBush from './entities/BerryBush.js';
-import Tree from './entities/Tree.js';
-import Rabbit from './entities/Rabbit.js';
+import Villager from './entities/human/Villager.js';
+import RedBerryBush from './entities/plant/RedBerryBush.js';
+import PoisonBerryBush from './entities/plant/PoisonBerryBush.js';
+import Tree from './entities/plant/Tree.js';
+import Rabbit from './entities/animal/Rabbit.js';
+import Wolf from './entities/animal/Wolf.js';
+import Storage from './entities/building/Storage.js';
 import {
     MAX_HUNGER,
 } from './constants.js';
@@ -18,26 +21,20 @@ const canvasWidth = canvas.width;
 const canvasHeight = canvas.height;
 
 let humans = [];
-let berryBushes = [];
+let bushes = [];
 let trees = [];
 let rabbits = [];
-let storage = {
-    x: canvasWidth / 2,
-    y: canvasHeight / 2,
-    size: 25,
-    berries: 0,
-    wood: 0,
-    food: 0,
-    color: '#a1887f'
-};
+let wolves = [];
+let storage = new Storage(canvasWidth / 2, canvasHeight / 2);
 let selectedHuman = null;
 let animationFrameId = null;
 
 function initSimulation() {
     humans = [];
-    berryBushes = [];
+    bushes = [];
     trees = [];
     rabbits = [];
+    wolves = [];
     selectedHuman = null;
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -48,18 +45,22 @@ function initSimulation() {
     storage.wood = 0;
     storage.food = 0;
 
-    humans.push(new Human(storage.x - 50, storage.y - 50, 1, 'M'));
-    humans.push(new Human(storage.x + 50, storage.y - 50, 2, 'F'));
-    humans.push(new Human(storage.x - 50, storage.y + 50, 3, 'M'));
-    humans.push(new Human(storage.x + 50, storage.y + 50, 4, 'F'));
+    humans.push(new Villager(storage.x - 50, storage.y - 50, 1, 'M'));
+    humans.push(new Villager(storage.x + 50, storage.y - 50, 2, 'F'));
+    humans.push(new Villager(storage.x - 50, storage.y + 50, 3, 'M'));
+    humans.push(new Villager(storage.x + 50, storage.y + 50, 4, 'F'));
 
-    const numBushes = 15;
+    const numBushes = 12;
+    const numPoison = 3;
     const numTrees = 10;
     const numRabbits = 5;
+    const numWolves = 2;
 
-    for (let i = 0; i < numBushes; i++) spawnResource(BerryBush, berryBushes);
+    for (let i = 0; i < numBushes; i++) spawnResource(RedBerryBush, bushes);
+    for (let i = 0; i < numPoison; i++) spawnResource(PoisonBerryBush, bushes);
     for (let i = 0; i < numTrees; i++) spawnResource(Tree, trees);
     for (let i = 0; i < numRabbits; i++) spawnResource(Rabbit, rabbits);
+    for (let i = 0; i < numWolves; i++) spawnResource(Wolf, wolves);
 
     updateStorageInfo();
     updateSelectedInfo();
@@ -89,18 +90,19 @@ function gameLoop() {
     ctx.strokeStyle = storage.color;
     ctx.strokeRect(storage.x - storage.size / 2, storage.y - storage.size / 2, storage.size, storage.size);
 
-    [...berryBushes, ...trees, ...rabbits].forEach(r => {
+    [...bushes, ...trees, ...rabbits, ...wolves].forEach(r => {
         if (r.update) {
-            if (r instanceof Rabbit) r.update(canvasWidth, canvasHeight);
+            if (r instanceof Rabbit || r instanceof Wolf) r.update(canvasWidth, canvasHeight, humans, rabbits);
             else r.update();
         }
         r.draw(ctx);
     });
 
     rabbits = rabbits.filter(r => r.isAlive);
+    wolves = wolves.filter(w => w.isAlive);
 
     humans.forEach(human => {
-        human.update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, berryBushes, trees, rabbits);
+        human.update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, bushes, trees, [...rabbits, ...wolves]);
         human.draw(ctx);
     });
 
@@ -118,7 +120,7 @@ function updateSelectedInfo() {
         const carried = `Berries: ${selectedHuman.berriesCarried}, Wood: ${selectedHuman.woodCarried}, Food: ${selectedHuman.foodCarried}`;
 
         selectedHumanInfoDiv.innerHTML = `
-            <p><b>Selected:</b> Human ${selectedHuman.id} (${selectedHuman.gender})</p>
+            <p><b>Selected:</b> Villager ${selectedHuman.id} (${selectedHuman.gender})</p>
             <p><b>Task:</b> ${selectedHuman.task.replace('_', ' ')}</p>
             <p><b>Hunger:</b></p>
             <div class="progress-bar-container">
@@ -128,7 +130,7 @@ function updateSelectedInfo() {
             <p class="mt-1"><b>Target:</b> ${selectedHuman.target ? selectedHuman.target.constructor.name : 'None'}</p>
         `;
     } else {
-        selectedHumanInfoDiv.innerHTML = '<p>Select a human to see details.</p>';
+        selectedHumanInfoDiv.innerHTML = '<p>Select a villager to see details.</p>';
     }
 }
 
@@ -153,7 +155,7 @@ canvas.addEventListener('click', event => {
     });
 
     if (!clickedOnHuman) {
-        clickedOnResource = [...berryBushes, ...trees, ...rabbits].find(r => isClickOn(clickX, clickY, r));
+        clickedOnResource = [...bushes, ...trees, ...rabbits, ...wolves].find(r => isClickOn(clickX, clickY, r));
     }
 
     if (clickedOnHuman) {
@@ -170,7 +172,7 @@ canvas.addEventListener('click', event => {
 });
 
 function isClickOn(clickX, clickY, entity) {
-    if (!entity || (entity instanceof Rabbit && !entity.isAlive)) return false;
+    if (!entity || ((entity instanceof Rabbit || entity instanceof Wolf) && !entity.isAlive)) return false;
     const dx = clickX - entity.x;
     const dy = clickY - entity.y;
     const clickRadius = (entity.size / 2) * 1.5;
