@@ -23,3 +23,9 @@ export const CHOP_WOOD_DURATION = 90;
 export const HUNT_RABBIT_DURATION = 75; // Time to 'catch' rabbit when close
 export const WOLF_DAMAGE = 20;
 export const POISON_BERRY_DAMAGE = 15;
+
+export const HUMAN_HEALTH_MIN = 80;
+export const HUMAN_HEALTH_MAX = 120;
+export const ANIMAL_HEALTH_MIN = 30;
+export const ANIMAL_HEALTH_MAX = 80;
+export const MEAT_DECAY_DURATION = 3000; // frames before corpse fully decays

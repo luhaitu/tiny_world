@@ -12,7 +12,15 @@ export default class Rabbit extends BaseAnimal {
     }
 
     draw(ctx) {
-        if (!this.isAlive) return;
+        if (!this.isAlive) {
+            if (this.meatLeft > 0) {
+                ctx.fillStyle = '#825';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            return;
+        }
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.ellipse(this.x, this.y, this.size, this.size / 1.5, 0, 0, Math.PI * 2);
@@ -20,7 +28,10 @@ export default class Rabbit extends BaseAnimal {
     }
 
     update(canvasWidth, canvasHeight) {
-        if (!this.isAlive) return;
+        if (!this.isAlive) {
+            this.updateDecay();
+            return;
+        }
         this.wanderTimer++;
         if (this.wanderTimer >= this.wanderInterval) {
             this.wanderAngle += (Math.random() - 0.5) * Math.PI;

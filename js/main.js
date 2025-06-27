@@ -43,7 +43,7 @@ function initSimulation() {
 
     storage.berries = 0;
     storage.wood = 0;
-    storage.food = 0;
+    storage.food = [];
 
     humans.push(new Villager(storage.x - 50, storage.y - 50, 1, 'M'));
     humans.push(new Villager(storage.x + 50, storage.y - 50, 2, 'F'));
@@ -98,11 +98,11 @@ function gameLoop() {
         r.draw(ctx);
     });
 
-    rabbits = rabbits.filter(r => r.isAlive);
-    wolves = wolves.filter(w => w.isAlive);
+    rabbits = rabbits.filter(r => r.isAlive || r.meatLeft > 0);
+    wolves = wolves.filter(w => w.isAlive || w.meatLeft > 0);
 
     humans.forEach(human => {
-        human.update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, bushes, trees, [...rabbits, ...wolves]);
+        human.update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, bushes, trees, [...rabbits, ...wolves], humans);
         human.draw(ctx);
     });
 
@@ -117,7 +117,7 @@ function updateSelectedInfo() {
         let progressBarClass = 'progress-bar';
         if (hungerPercent < 60) progressBarClass += ' low';
         if (hungerPercent < 30) progressBarClass += ' critical';
-        const carried = `Berries: ${selectedHuman.berriesCarried}, Wood: ${selectedHuman.woodCarried}, Food: ${selectedHuman.foodCarried}`;
+        const carried = `Berries: ${selectedHuman.berriesCarried}, Wood: ${selectedHuman.woodCarried}, Food: ${selectedHuman.foodCarried.length}`;
 
         selectedHumanInfoDiv.innerHTML = `
             <p><b>Selected:</b> Villager ${selectedHuman.id} (${selectedHuman.gender})</p>
@@ -137,7 +137,7 @@ function updateSelectedInfo() {
 function updateStorageInfo() {
     storageBerriesDiv.textContent = `Berries: ${storage.berries}`;
     storageWoodDiv.textContent = `Wood: ${storage.wood}`;
-    storageFoodDiv.textContent = `Food (Meat): ${storage.food}`;
+    storageFoodDiv.textContent = `Food (Meat): ${storage.food.length}`;
 }
 
 canvas.addEventListener('click', event => {
@@ -172,7 +172,9 @@ canvas.addEventListener('click', event => {
 });
 
 function isClickOn(clickX, clickY, entity) {
-    if (!entity || ((entity instanceof Rabbit || entity instanceof Wolf) && !entity.isAlive)) return false;
+    if (!entity) return false;
+    if ((entity instanceof Rabbit || entity instanceof Wolf) && entity.meatLeft <= 0) return false;
+    if (entity instanceof Villager && entity.health <= 0 && entity.meatLeft <= 0) return false;
     const dx = clickX - entity.x;
     const dy = clickY - entity.y;
     const clickRadius = (entity.size / 2) * 1.5;

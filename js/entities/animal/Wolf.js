@@ -10,7 +10,15 @@ export default class Wolf extends BaseAnimal {
     }
 
     draw(ctx) {
-        if (!this.isAlive) return;
+        if (!this.isAlive) {
+            if (this.meatLeft > 0) {
+                ctx.fillStyle = '#633';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            return;
+        }
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
@@ -18,13 +26,19 @@ export default class Wolf extends BaseAnimal {
     }
 
     update(canvasWidth, canvasHeight, humans, rabbits) {
-        if (!this.isAlive) return;
+        if (!this.isAlive) {
+            this.updateDecay();
+            return;
+        }
         const target = this.findTarget(humans, rabbits);
         if (target) {
             this.moveTowards(target.x, target.y, WOLF_SPEED);
             if (this.distanceTo(target) < this.size) {
                 if (target.health !== undefined) {
                     target.health -= WOLF_DAMAGE;
+                    if (target.health <= 0) {
+                        target.isAlive = false;
+                    }
                 } else {
                     target.isAlive = false;
                 }
