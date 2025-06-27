@@ -14,9 +14,9 @@ Tiny World is a real-time strategy prototype with town-building and survival mec
 ## Project Structure
 
 - `index.html` - main simulation page
-- `js/game.js` - game logic
+- `js/main.js` - game logic
 - `css/style.css` - visual styling
 
 ## Getting Started
 
-Open `index.html` in a web browser to play with the simulation. All styles are stored in `css/style.css` and the game logic lives in `js/game.js`.
+Open `index.html` in a web browser to play with the simulation. All styles are stored in `css/style.css` and the game logic lives in `js/main.js`.
