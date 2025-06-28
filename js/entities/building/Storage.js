@@ -5,7 +5,7 @@ export default class Storage extends BaseBuilding {
         super(x, y);
         this.berries = 0;
         this.wood = 0;
-        this.food = 0;
+        this.food = [];
         this.color = '#a1887f';
     }
 

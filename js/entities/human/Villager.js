@@ -1,5 +1,6 @@
 import BaseHuman from './BaseHuman.js';
-import { HUMAN_SIZE, HUMAN_SPEED, MAX_HUNGER, HUNGER_DECAY_RATE, HUNGER_THRESHOLD_TO_EAT, HUNGER_THRESHOLD_TO_GATHER, GATHER_DISTANCE, CARRY_CAPACITY, GATHER_BERRY_DURATION, CHOP_WOOD_DURATION, HUNT_RABBIT_DURATION, HUNGER_PER_BERRY, HUNGER_PER_FOOD, POISON_BERRY_DAMAGE, MAX_HEALTH } from '../../constants.js';
+import { HUMAN_SIZE, HUMAN_SPEED, MAX_HUNGER, HUNGER_DECAY_RATE, HUNGER_THRESHOLD_TO_EAT, HUNGER_THRESHOLD_TO_GATHER, GATHER_DISTANCE, CARRY_CAPACITY, GATHER_BERRY_DURATION, CHOP_WOOD_DURATION, HUNT_RABBIT_DURATION, HUNGER_PER_BERRY, HUNGER_PER_FOOD, POISON_BERRY_DAMAGE } from '../../constants.js';
+import Meat from '../thing/Meat.js';
 import Bush from '../plant/Bush.js';
 import Tree from '../plant/Tree.js';
 import Rabbit from '../animal/Rabbit.js';
@@ -13,7 +14,6 @@ export default class Villager extends BaseHuman {
         this.color = gender === 'M' ? '#4a90e2' : '#e91e63';
         this.size = HUMAN_SIZE;
         this.hunger = MAX_HUNGER;
-        this.health = MAX_HEALTH;
         this.destination = { x, y };
 
         // Task / Targetting
@@ -24,7 +24,7 @@ export default class Villager extends BaseHuman {
         // Inventory
         this.berriesCarried = 0;
         this.woodCarried = 0;
-        this.foodCarried = 0;
+        this.foodCarried = [];
 
         this.isSelected = false;
     }
@@ -55,15 +55,18 @@ export default class Villager extends BaseHuman {
         ctx.fillRect(barX, barY, barWidth * hungerPercent, barHeight);
     }
 
-    update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, bushes, trees, animals) {
+    update(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, bushes, trees, animals, humans) {
         this.hunger -= HUNGER_DECAY_RATE;
         if (this.hunger < 0) this.hunger = 0;
-        if (this.health <= 0) return;
+        if (this.health <= 0) {
+            this.updateDecay();
+            return;
+        }
 
         this.executeTask(ctx, canvasWidth, canvasHeight, storage, updateStorageInfo, trees);
 
         if (this.task === 'idle') {
-            this.decideNextAction(storage, bushes, trees, animals);
+            this.decideNextAction(storage, bushes, trees, animals, humans);
         }
     }
 
@@ -134,10 +137,23 @@ export default class Villager extends BaseHuman {
             if (this.actionTimer >= duration) {
                 if (this.target.isAlive) {
                     this.target.isAlive = false;
-                    this.foodCarried++;
+                }
+                this.task = 'collecting_meat';
+                this.actionTimer = 0;
+            }
+        } else if (this.task === 'collecting_meat' && this.target && this.target.meatLeft !== undefined) {
+            duration = GATHER_BERRY_DURATION;
+            if (this.actionTimer >= duration) {
+                if (this.target.meatLeft > 0) {
+                    this.target.meatLeft--;
+                    const from = this.target instanceof Rabbit ? 'rabbit' : this.target instanceof Wolf ? 'wolf' : 'human';
+                    this.foodCarried.push(new Meat(1, from));
                     resourceGained = true;
                 }
-                this.target = null;
+                if (this.target.meatLeft <= 0) {
+                    this.target = null;
+                }
+                this.actionTimer = 0;
             }
         } else if (this.task === 'eating') {
             duration = GATHER_BERRY_DURATION;
@@ -145,23 +161,23 @@ export default class Villager extends BaseHuman {
                 if (storage.berries > 0 && this.hunger < MAX_HUNGER) {
                     storage.berries--;
                     this.hunger += HUNGER_PER_BERRY;
-                } else if (storage.food > 0 && this.hunger < MAX_HUNGER) {
-                    storage.food--;
+                } else if (storage.food.length > 0 && this.hunger < MAX_HUNGER) {
+                    storage.food.pop();
                     this.hunger += HUNGER_PER_FOOD;
                 }
                 if (this.hunger >= MAX_HUNGER) {
                     this.hunger = MAX_HUNGER;
                     this.task = 'idle';
-                } else if (storage.berries === 0 && storage.food === 0) {
+                } else if (storage.berries === 0 && storage.food.length === 0) {
                     this.task = 'idle';
                 }
                 this.actionTimer = 0;
             }
         }
 
-        if (this.actionTimer >= duration || (this.target === null && (this.task === 'gathering_berries' || this.task === 'chopping_wood' || this.task === 'hunting'))) {
+        if (this.actionTimer >= duration || (this.target === null && (this.task === 'gathering_berries' || this.task === 'chopping_wood' || this.task === 'hunting' || this.task === 'collecting_meat'))) {
             this.actionTimer = 0;
-            const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried;
+            const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried.length;
             if (carriedTotal >= CARRY_CAPACITY || !resourceGained || (this.target && (this.target.berries === 0 || this.target.wood === 0))) {
                 this.task = 'returning_storage';
                 this.target = null;
@@ -169,10 +185,10 @@ export default class Villager extends BaseHuman {
         }
     }
 
-    decideNextAction(storage, bushes, trees, animals) {
-        const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried;
+    decideNextAction(storage, bushes, trees, animals, humans) {
+        const carriedTotal = this.berriesCarried + this.woodCarried + this.foodCarried.length;
 
-        if (this.hunger < HUNGER_THRESHOLD_TO_EAT && (storage.berries > 0 || storage.food > 0)) {
+        if (this.hunger < HUNGER_THRESHOLD_TO_EAT && (storage.berries > 0 || storage.food.length > 0)) {
             if (!this.hasReached(storage.x, storage.y)) {
                 this.task = 'moving';
                 this.destination = { x: storage.x, y: storage.y };
@@ -196,6 +212,16 @@ export default class Villager extends BaseHuman {
                 this.target = foodTarget;
                 this.task = 'moving';
                 this.destination = { x: foodTarget.x, y: foodTarget.y };
+                return;
+            }
+            let carcassTarget = this.findClosestReachable([
+                ...animals.filter(a => !a.isAlive && a.meatLeft > 0),
+                ...humans.filter(h => h.health <= 0 && h.meatLeft > 0 && h !== this)
+            ]);
+            if (carcassTarget) {
+                this.target = carcassTarget;
+                this.task = 'moving';
+                this.destination = { x: carcassTarget.x, y: carcassTarget.y };
                 return;
             }
             let berryTarget = this.findClosestReachable(bushes.filter(b => b.berries > 0));
@@ -238,15 +264,22 @@ export default class Villager extends BaseHuman {
                 this.actionTimer = 0;
                 if (this.target instanceof Bush) this.task = 'gathering_berries';
                 else if (this.target instanceof Tree) this.task = 'chopping_wood';
-                else if (this.target instanceof Rabbit || this.target instanceof Wolf) this.task = 'hunting';
+                else if (this.target instanceof Rabbit || this.target instanceof Wolf) {
+                    this.task = this.target.isAlive ? 'hunting' : 'collecting_meat';
+                } else if (this.target.health !== undefined && this.target.health <= 0) {
+                    this.task = 'collecting_meat';
+                }
             }
         } else {
             if (this.target && this.task === 'moving') {
                 this.actionTimer = 0;
                 if (this.target instanceof Bush) this.task = 'gathering_berries';
                 else if (this.target instanceof Tree) this.task = 'chopping_wood';
-                else if (this.target instanceof Rabbit || this.target instanceof Wolf) this.task = 'hunting';
-                else {
+                else if (this.target instanceof Rabbit || this.target instanceof Wolf) {
+                    this.task = this.target.isAlive ? 'hunting' : 'collecting_meat';
+                } else if (this.target.health !== undefined && this.target.health <= 0) {
+                    this.task = 'collecting_meat';
+                } else {
                     this.task = 'idle';
                     this.destination = { x: this.x, y: this.y };
                 }
@@ -273,10 +306,11 @@ export default class Villager extends BaseHuman {
     }
 
     setManualTarget(resource) {
-        if (resource instanceof Bush || resource instanceof Tree || resource instanceof Rabbit || resource instanceof Wolf) {
+        if (resource instanceof Bush || resource instanceof Tree || resource instanceof Rabbit || resource instanceof Wolf || resource instanceof Villager) {
             if ((resource instanceof Bush && resource.berries > 0) ||
                 (resource instanceof Tree && resource.wood > 0) ||
-                ((resource instanceof Rabbit || resource instanceof Wolf) && resource.isAlive)) {
+                ((resource instanceof Rabbit || resource instanceof Wolf) && (resource.isAlive || resource.meatLeft > 0)) ||
+                (resource instanceof Villager && resource.health <= 0 && resource.meatLeft > 0)) {
                 this.target = resource;
                 this.destination = { x: resource.x, y: resource.y };
                 this.task = 'moving';
@@ -298,7 +332,8 @@ export default class Villager extends BaseHuman {
             let isValid = false;
             if (resource instanceof Bush && resource.berries > 0) isValid = true;
             else if (resource instanceof Tree && resource.wood > 0) isValid = true;
-            else if ((resource instanceof Rabbit || resource instanceof Wolf) && resource.isAlive) isValid = true;
+            else if ((resource instanceof Rabbit || resource instanceof Wolf) && (resource.isAlive || resource.meatLeft > 0)) isValid = true;
+            else if (resource instanceof Villager && resource.health <= 0 && resource.meatLeft > 0) isValid = true;
 
             if (isValid) {
                 const dx = resource.x - this.x;
@@ -316,10 +351,10 @@ export default class Villager extends BaseHuman {
     depositResources(storage, updateStorageInfo) {
         storage.berries += this.berriesCarried;
         storage.wood += this.woodCarried;
-        storage.food += this.foodCarried;
+        storage.food.push(...this.foodCarried);
         this.berriesCarried = 0;
         this.woodCarried = 0;
-        this.foodCarried = 0;
+        this.foodCarried = [];
         updateStorageInfo();
     }
 }
